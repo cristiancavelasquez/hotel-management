@@ -7,17 +7,102 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Employee {
+  id            String           @id @default(uuid())
+  firstName     String
+  lastName      String
+  email         String           @unique
+  roleId        Int
+  role          Role             @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  tasks         TaskAssignment[]
+  notifications Notification[]
+  users         User[]
+  Task          Task[]
+}
+
+model Role {
+  id        Int        @id @default(autoincrement())
+  roleName  String
+  employees Employee[]
+}
+
 model User {
-  id       String    @id
-  sessions Session[]
-  username String   @unique
+  id             String    @id @default(uuid())
+  employeeId     String
+  username       String    @unique
   hashedPassword String
+  isAdmin        Boolean
+  employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  sessions       Session[]
 }
 
 model Session {
-  id        String   @id
+  id        String   @id @default(uuid())
   userId    String
   expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
 
-  user User @relation(references: [id], fields: [userId], onDelete: Cascade)
+model Task {
+  id            String           @id @default(uuid())
+  title         String
+  description   String
+  startDate     DateTime
+  endDate       DateTime
+  createdById   String
+  statusId      Int
+  isRecurring   Boolean
+  createdBy     Employee         @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  status        TaskStatus       @relation(fields: [statusId], references: [id], onDelete: Cascade)
+  assignments   TaskAssignment[]
+  photos        TaskPhoto[]
+  notifications Notification[]
+  recurrences   TaskRecurrence[]
+}
+
+model TaskAssignment {
+  id         String   @id @default(uuid())
+  employeeId String
+  taskId     String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model TaskStatus {
+  id         Int    @id @default(autoincrement())
+  statusName String
+  priority   Int
+  tasks      Task[]
+}
+
+model TaskPhoto {
+  id         String   @id @default(uuid())
+  taskId     String
+  photoUrl   String
+  uploadedAt DateTime
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model TaskRecurrence {
+  id             String    @id @default(uuid())
+  taskId         String
+  recurrenceType String // This could be an enum
+  interval       Int
+  daysOfWeek     String[] // Prisma doesn't support set, using array instead
+  dayOfMonth     Int?
+  monthOfYear    Int?
+  lastOccurrence DateTime?
+  nextOccurrence DateTime?
+  task           Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  employeeId String
+  taskId     String
+  message    String
+  createdAt  DateTime
+  isRead     Boolean
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }
